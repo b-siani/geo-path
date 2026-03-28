@@ -226,7 +226,6 @@ __marimo__/
 *.geojson
 
 # Data folders
-data/
 datasets/
 raw_data/
 
