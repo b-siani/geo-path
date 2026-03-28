@@ -205,3 +205,51 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# =========================
+# Geospatial / GIS files
+# =========================
+*.tif
+*.tiff
+*.img
+*.nc
+*.h5
+
+# Shapefiles (múltiplos arquivos)
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+
+# GeoJSON / outputs pesados
+*.geojson
+
+# Data folders
+data/
+datasets/
+raw_data/
+
+# Outputs gerados
+outputs/
+results/
+maps/
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Conda / environments
+# =========================
+.env
+.venv/
+env/
+
+# =========================
+# Temporary / cache
+# =========================
+*.tmp
+*.cache
+.cache/
