@@ -1,3 +1,14 @@
+# %% [markdown]
+# ## Introdução
+# A rotina de processamento abaixo foi desenvolvido para estimar o estoque de biomassa viva acima do solo a partir de dados brutos de um inventário florestal realizado em uma área do bioma Caatinga. O inventário abrange 78 parcelas de 20x50 m nas quais foram mensurados indivíduos com DAP > 10 cm. Cada uma das parcelas possui duas sub parcelas de 10x10 m, nas quais foram mensurados indivíduos com DAP > 3 cm.
+# <br><br>
+# A estimativa foi feita por meio de equações alométricas específicas para a Caatinga, elaboradas por Sampaio & Silva (2005), e aplicadas no formato de equação de simples entrada e dupla entrada (ex.: DAP e Altura). A inclusão de uma segunda variável permite avaliar o ganho de precisão decorrente da inclusão da altura no modelo. Além disso, os resultados são apresentados em dois cenários de amostragem:
+# - **Sem estratificação**, a área do projeto é tratada como uma única unidade amostral homogênea.
+# - **Com estratificação**, segregando a área entre os estratos "Cristalino" e "Sedimentar" afim de capturar a heterogeneidade ambiental, conforme delimitação dos shapefiles disponibilizados.
+# <br>
+# <br>
+# Para cada combinação de cenário e equação, o estoque de biomassa é expresso em Mg.ha^-1 e em biomassa total da área (Mg), conforme o enunciado do desafio. Também são apresentadas as respectivas incertezas a 95% de confiança, calculada a partir do erro padrão da média.
+
 # %%
 import pandas as pd
 import geopandas as gpd
@@ -84,7 +95,6 @@ def eq_small_spp (dap):
 def eq_large_spp (dap):
     return 0.2368 * pow(dap, 2.2219)
 
-
 # %% [markdown]
 # ### Carregando dados
 
@@ -104,7 +114,7 @@ dados = leitor_de_arquivo(caminho_dataset, extensao_arquivo)
 dados.head()
 
 # %% [markdown]
-# Uma vez que a análise por estrato é necessária para o exercício, e também para que não tenhamos uma estimativa superestimada do estoque de biomassa, farei um spatial join no início do processamento para que o dataset contenha uma coluna indicativa do estrato.<br><br>Antes do join, precisamos ter certeza que ambas geometrias estão no mesmos Sistema Coordenadas (CRS).<br><br>As principais informações que precisamos extrair dos shapefiles são:
+# Uma vez que é necessária a análise por estrato, farei um spatial join no início do processamento para que o dataset contenha uma coluna indicativa do estrato.<br><br>Antes do join, preciso ter certeza que ambas geometrias estão no mesmos Sistema Coordenadas (CRS).<br><br>As principais informações que preciso extrair dos shapefiles são:
 # - Área total
 # - Área de cada estrato
 # - Quais parcelas pertencem a cada estrato
@@ -118,7 +128,7 @@ estratos = gpd.read_file(caminho_estratos)
 padronizar_crs(parcelas, estratos)
 
 # %% [markdown]
-# Unindo os GeoDataFrames para extrair área total e por estrato. Usaremos mais a frente para calcular as estimativas por estrato e área total. 
+# Unindo os GeoDataFrames para extrair área total e por estrato. Utilizarei mais a frente para calcular as estimativas por estrato e área total. 
 
 # %%
 # O primeiro shp é o que mantêm as geometrias no join
@@ -144,7 +154,7 @@ peso_cristalino = cristalino_area_ha / area_total_ha
 peso_sedimentar = sedimentar_area_ha / area_total_ha
 
 # %% [markdown]
-# Para sabermos quais parcelas estão em cada estrato, fazemos um `merge` das geometrias com o dataset utilizando como ID comum a coluna ID e, em seguida, renomeado-a para facilitar a associação com "parcela".
+# Para saber quais parcelas estão em cada estrato, faço um `merge` das geometrias com o dataset utilizando como ID comum a coluna ID e, em seguida, renomeado-a para facilitar a associação com "parcela".
 
 # %%
 df = pd.merge(dados, parcelas_estratos, how='inner', on='ID')
@@ -153,13 +163,15 @@ df.rename(columns = {'ID': 'ID_parcela', 'grupo': 'GRUPO'},
                      inplace = True) # inplace evita criar outro df
 
 # %% [markdown]
-# # Explorando os dados
-
-# %% [markdown]
-# Aqui a ideia é ter uma noção geral dos dados, se tem algum dado faltando ou que foi preenchido de forma errada (acidentalemente incluir um 0 a mais ou a menos) e distribuição geral das variáveis. <br><br> No artigo, o autor descreve quais as espécies selecionadas para elaboração das equações alométricas e quais as consequeências dessas escolhas. Saber a distribuição do diâmetro e da altura, me ajuda a identificar se as condições do estudo se assemelham a realidade de campo e, consequentemente, se devo ou não considerar as equações de outro estudo em área semelhante a área de projeto.
+# ## Explorando os dados
+# 
+# Aqui a ideia é ter uma noção geral dos dados, se tem algum dado faltando ou que foi preenchido de forma errada (dado categórico em coluna numérica e vice versa) e distribuição geral das variáveis. <br><br> No artigo, o autor descreve quais espécies foram selecionadas para a elaboração das equações alométricas e quais as consequências dessas escolhas. Saber a distribuição de diâmetro e altura, me ajuda a identificar se as condições do estudo se assemelham a realidade de campo e, consequentemente, se devo ou não considerar ajustes no dataset ou equações diferentes, elaboradas em áreas semelhantes a área do inventário.
 
 # %%
 df.isna().sum()
+
+# %%
+df.dtypes
 
 # %% [markdown]
 # As métricas abaixo estão de acordo com o descrito no artigo.<br> Árvores de perfil baixo, raramente atingindo mais que 20 m de altura. 
@@ -209,7 +221,7 @@ plt.title('Distribuição das alturas')
 plt.show()
 
 # %% [markdown]
-# Como o artigo possui equações específicas para algumas espécies, pensei em aplicá-las nas espécies identificadas no dataset, entretanto, uma vez que há apenas a o nome comum (que pode sofrer variações regionais), optei por aplicar apenas a equação generalista. Segundo o artigo, a eq generalista é ideal para estimar biomassa no bioma, enquanto equações específicas são mais indicadas para estudos populacionais. 
+# Como o artigo possui equações específicas para algumas espécies, pensei em aplicá-las individualemtne para as espécies encontradas no dataset, entretanto, uma vez que há apenas o nome comum (que pode sofrer variações regionais), optei por aplicar apenas a equação generalista.<br>Segundo o artigo, a eq. generalista é ideal para estimar biomassa no bioma, enquanto equações específicas são mais indicadas para estudos populacionais. A única equação específica utilizada, é para o indivíduo de nome popular Madacaru (C. jamacaru), um cactus arbustivo. O autor deixa claro que para estes indivíduos, deve-se aplicar a equação específica ao invés da eq. generalista.
 
 # %%
 # individuos_unicos = df['NOME_POPULAR'].value_counts()
@@ -225,18 +237,16 @@ plt.show()
 # M. urundeuva = Aroeira, 19 
 
 # %% [markdown]
-# # Processando os dados
+# ## Processando os dados
 # 
-# As variáveis apresentadas nas equações desevolvidas por Sampaio & Silva e utilizadas neste script estão nas seguintes unidades:
+# As variáveis apresentadas nas equações desevolvidas por Sampaio & Silva (2005) e utilizadas neste script estão nas seguintes unidades:
 # - Área basal a altura do peito (ABH): cm²
 # - Diâmetro a altura do peito (DBH): cm
 # - Altura (H): m
 # 
-# Como uma das equações utiliza área basal como dado de entrada, vamos criar uma coluna apenas com essa variável, expressa em cm².
+# Como uma das equações que selecionei utiliza área basal como dado de entrada, vou criar uma coluna apenas com essa variável, expressa em cm².
 # <br>
-# O desafio pede estoque de biomassa em Mg ha e em área total. Nesse ponto fiquei em dúvida se devo ou não incluir o estoque na biomassa morta. No contexto de projetos de carbono, um dos pools refere-se justamente a _deadwood_, mas normalmente se calcula biomassa viva (pensando no contexto de inventários comuns com florestas nativas / plantadas, depende do objetivo do inventário).
-# <br>
-# A princípio, irei excluir as árvores mortas e calcular as estimativas separadas.
+# O desafio pede estoque de biomassa em Mg ha e em área total. Nesse ponto fiquei em dúvida se devo ou não incluir o estoque na biomassa morta. No contexto de projetos de carbono, um dos _pools_ refere-se justamente a _deadwood_, faria sentido separa o dataset e fazer a estimativa apenas para esse _pool_, mas a princípio, irei excluir as árvores mortas e calcular as estimativas separadas apenas para indivíduos vivos.
 
 # %%
 df['AREA_BASAL_cm2'] = (pi/4) * pow(df['DAP_cm'], 2)
@@ -247,7 +257,6 @@ df = df[df['STATUS'].str.lower() == 'viva']
 # %% [markdown]
 # ## Cenário sem estratificação
 # ### Equação Simples Entrada
-# #### Aplicação da equação geral exceto para indivíduos de _C. jamacaru_
 
 # %%
 df_simples = df.copy()
@@ -258,7 +267,7 @@ df_dupla = df.copy()
 # - Parcela principal >> 20x50 m = 1000 m²
 # - Sub parcelas (2 por parcela) >> 10x10 m * 2 = 200 m² 
 # 
-# Um subset com cada conjunto facilita a aplicação dos fatores corretos. 
+# Crio um subset para cada conjunto, isso facilita a posterior aplicação dos fatores de expansão corretos. 
 
 # %%
 area_parcela_m2 = 1000
@@ -276,7 +285,7 @@ fator_exp_sub = 10_000 / area_sub_m2
 print(f'Fator de expansão para a sub parcela: {fator_exp_sub} ha^(-1)')
 
 # %% [markdown]
-# Aplicação da equação de simples entrada
+# Aplicação da equação de simples entrada e validação da criação da coluna biomassa_kg
 
 # %%
 df_simples['BIOMASSA_kg'] = df_simples.apply(lambda x: eq_biomassa_jamacaru(x['DAP_cm'])
@@ -287,13 +296,13 @@ df_simples['BIOMASSA_kg'] = df_simples.apply(lambda x: eq_biomassa_jamacaru(x['D
 df_simples
 
 # %% [markdown]
-# A equação retorna o dado em kg, portanto, vamos criar uma coluna para toneladas.
+# A equação retorna o dado em kg, portanto, converto e crio uma coluna em toneladas.
 
 # %%
 df_simples['BIOMASSA_t'] = df_simples['BIOMASSA_kg'] / 1000
 
 # %% [markdown]
-# De posse dos fatores de expansão, os dados são agrupados pelo ID de cada parcela e realizado o produto da biomassa (t) calculada com o fator de expansão. O resultado de cada registro de uma parcela _i_ é somado obtendo o total por hectare por parcela.
+# De posse dos fatores de expansão, os dados são agrupados pelo ID de cada parcela e realizado o produto da biomassa (t) calculada pelo fator de expansão. O resultado de cada registro da parcela _i_ é somado obtendo o total por hectare por parcela.
 
 # %%
 df_simples_parc = df_simples[df_simples['SUB_PARCELA'] == 'DAP_10_Plot']
@@ -330,10 +339,11 @@ resultados_simples(media_biomassa_t_ha, std_biomassa_t_ha, ic, erro_amostral, er
 # %% [markdown]
 # #### Calculando estatísticas com estratificação
 
-# %%
-biomassa_por_parcela_est = biomassa_por_parcela.reset_index(level='GRUPO')
+# %% [markdown]
+# Aqui eu crio um dicionário com os dados estatísticos por estrato. O loop itera pelo subset `biomassa_por_parcela_est` e extrai a média, variância e número de parcelas por estrato.
 
 # %%
+biomassa_por_parcela_est = biomassa_por_parcela.reset_index(level='GRUPO')
 estats = dict()
 
 for nome_estrato, grupo in biomassa_por_parcela_est.groupby('GRUPO'):
@@ -353,8 +363,24 @@ estats['Sedimentar']['peso'] = peso_sedimentar
 estats                         
 
 # %%
-# checkando se há outliers no estrato sedimentar, var muito alta
+a = biomassa_por_parcela_est[biomassa_por_parcela_est['GRUPO'] == 'Cristalino']['BIOMASSA_por_parcela_t_ha']
+b = biomassa_por_parcela_est[biomassa_por_parcela_est['GRUPO'] == 'Sedimentar']['BIOMASSA_por_parcela_t_ha']
+
+# %%
+plt.boxplot([a,b])
+
+# %% [markdown]
+# Verificando se há outliers no estrato sedimentar, pois a variância do estrato sedimentar está muito alta, indicando maior heterogeneidade quando comparado ao estrato Cristalino.
+# Nessa rotina não foi feita a ANOVA, entretanto, pelos resultados acima deduzo que a análise acusaria diferença significativa entre estratos.<br><br>Ao observar os resultados abaixo, a mediana é muito próxima a média, indicando uma distribuição quase simétrica. Caso a diferença entre média e mediana fosse alta, isso indicaria a presença de outliers que distorcem o valor médio.
+
+# %%
 biomassa_por_parcela_est[biomassa_por_parcela_est['GRUPO'] == 'Sedimentar']['BIOMASSA_por_parcela_t_ha'].describe()
+
+# %%
+
+
+# %% [markdown]
+# Cálculo das estatísticas agregadas
 
 # %%
 # resultados['Cristalino']['media']
@@ -459,5 +485,8 @@ ic = t * erro_padrao
 erro_amostral = (ic / media_estratos) * 100
 
 resultados_estratificado(media_biomassa_t_ha, erro_padrao, ic, erro_amostral, area_total_ha)
+
+# %%
+
 
 
