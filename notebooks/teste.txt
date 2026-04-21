@@ -1,0 +1,1 @@
+O texto deste arquivo foi escrito com a função .open() e o método .write()
