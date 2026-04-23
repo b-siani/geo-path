@@ -1,1 +1,7 @@
 O texto deste arquivo foi escrito com a função .open() e o método .write()
+Link
+Zelda
+Ganon
+As palavras abaixo
+Foram escritas utilizando o modo
+"a" > append
